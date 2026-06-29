@@ -1,76 +1,71 @@
-```md
-# ✈️ VoyAgent
+# 🚀 VoyAgent
 
 > **Your AI-Powered Travel Concierge**
 
-VoyAgent is a full-stack AI-powered travel planning platform that generates personalized travel itineraries using intelligent AI agents. Instead of relying on a single LLM response, VoyAgent is designed to evolve into a multi-agent system where specialized agents collaborate to plan trips, optimize budgets, analyze weather, recommend attractions, and provide an end-to-end travel experience.
+VoyAgent is a full-stack AI-powered travel planning platform that helps users create personalized travel itineraries using AI. Users simply describe their travel plans in natural language, and VoyAgent generates a complete itinerary including budget estimation, day-wise plans, packing suggestions, and travel tips.
+
+The project is designed with a scalable architecture using **Next.js**, **Express.js**, and a dedicated **FastAPI AI service** powered by **LangGraph** and **LangChain**.
 
 ---
 
-## 🚀 Vision
+## ✨ Features
 
-Planning a trip often requires browsing multiple websites, comparing information, and manually creating an itinerary.
-
-VoyAgent aims to simplify this process by acting as an AI Travel Concierge that understands natural language requests and generates complete travel plans tailored to each user's preferences.
-
----
-
-## 🎯 MVP Features
-
-- 🔐 JWT Authentication
+- 🔐 Secure JWT Authentication
 - 👤 User Dashboard
-- ✍️ Natural Language Trip Planner
+- ✍️ Natural Language Trip Planning
 - 🤖 AI-Powered Itinerary Generation
-- 💰 Budget Estimation
 - 📅 Day-wise Travel Plan
-- 🎒 Packing List
+- 💰 Budget Estimation
+- 🎒 Packing Recommendations
 - 💡 Travel Tips
-- 🗂 Trip History
+- 🗂 Save & View Trip History
 
 ---
 
-## 🏗 Architecture
-```
+## 🏗️ System Architecture
 
-Next.js (Frontend)
-│
-▼
-Express.js Backend
-│
-▼
-FastAPI AI Service
-│
-▼
-LangGraph + LangChain
-│
-▼
-Gemini API
-
+```text
+                 Next.js Frontend
+                        │
+                        ▼
+              Express.js Backend
+                        │
+            REST API Communication
+                        │
+                        ▼
+             FastAPI AI Microservice
+                        │
+          LangGraph + LangChain
+                        │
+                        ▼
+                 Gemini API
 ```
 
 ---
 
-## 🛠 Tech Stack
+## 🛠️ Tech Stack
 
 ### Frontend
 
 - Next.js
+- React
 - Tailwind CSS
 
 ### Backend
 
-- Express.js
 - Node.js
+- Express.js
 - MongoDB Atlas
+- Mongoose
 - JWT Authentication
 
-### AI
+### AI Service
 
 - Python
 - FastAPI
 - LangGraph
 - LangChain
-- Gemini API
+- Google Gemini API
 
 ### DevOps
 
@@ -86,26 +81,37 @@ Gemini API
 
 ## 📂 Project Structure
 
-```
-
+```text
 voyagent/
-
+│
 ├── docs/
+│
 ├── frontend/
+│
 ├── backend/
+│
 ├── ai-service/
-└── README.md
-
+│
+├── .gitignore
+├── README.md
+├── LICENSE
+└── docker-compose.yml
 ```
 
 ---
 
-## 📌 Project Status
+## 🚧 Project Status
 
-🚧 Currently in active development.
+VoyAgent is currently under active development.
 
-This project is being built incrementally, following a production-style software development workflow.
+The project is being built incrementally with a focus on clean architecture, scalability, and production-ready engineering practices.
 
 ---
 
-```
+## 🤝 Contributing
+
+Contributions, suggestions, and feedback are always welcome.
+
+Feel free to fork the repository, open an issue, or submit a pull request.
+
+---
