@@ -1,3 +1,4 @@
+from routes.planner import router as planner_router
 from fastapi import FastAPI
 
 app = FastAPI(
@@ -6,6 +7,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.include_router(planner_router)
 
 @app.get("/")
 def home():
