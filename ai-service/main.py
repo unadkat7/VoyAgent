@@ -1,14 +1,15 @@
-import uvicorn
-from dotenv import load_dotenv
+from fastapi import FastAPI
 
-from app import app
+app = FastAPI(
+    title="VoyAgent AI Service",
+    description="AI Backend for VoyAgent",
+    version="1.0.0",
+)
 
-load_dotenv()
 
-if __name__ == "__main__":
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+@app.get("/")
+def home():
+    return {
+        "success": True,
+        "message": "VoyAgent AI Service is Running 🚀",
+    }
