@@ -355,7 +355,7 @@ def router_node(state: TravelState):
     print("All required information collected.")
 
     return {
-        "current_agent": "planning"
+        "current_agent": "hotel"
     }
 
 
@@ -402,30 +402,6 @@ def clarification_node(state: TravelState):
     }
 
 
-# ============================================================
-# PLANNING PIPELINE
-# ============================================================
-
-def planning_pipeline_node(state: TravelState):
-
-    print("\n========================================")
-    print("Planning Pipeline")
-    print("========================================")
-
-    print("Planner has gathered all the required information.")
-
-    print("\nNext Version:")
-
-    print("→ Hotel Agent")
-    print("→ Flight Agent")
-    print("→ Itinerary Agent")
-
-    return {
-
-        "current_agent": "planning"
-
-    }
-
 
 # ============================================================
 # ROUTING FUNCTION
@@ -436,8 +412,84 @@ def route_after_router(state: TravelState):
     if state["current_agent"] == "clarification":
         return "clarification"
 
-    return "planning"
+    return "hotel"
 
+
+# Hotel Agent
+
+
+
+# 1. Hotel Prompt
+
+hotel_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+You are the Hotel Recommendation Agent of VoyAgent.
+
+Your ONLY responsibility is recommending hotels.
+
+You will receive TripRequirements.
+
+Recommend exactly 3 hotels.
+
+Recommendations should match:
+
+- destination
+- budget
+- travel style
+
+Do NOT generate flights.
+
+Do NOT generate itinerary.
+
+Return ONLY the HotelRecommendations schema.
+"""
+        ),
+
+        (
+            "human",
+            "{trip_requirements}"
+        ),
+    ]
+)
+
+
+# 2. Hotel LLM
+
+hotel_llm = llm.with_structured_output(
+    HotelRecommendations
+)
+
+# 3. Hotel Chain
+
+hotel_chain = hotel_prompt | hotel_llm
+
+# 4. Hotel Node
+
+def hotel_node(state: TravelState):
+
+    print("\n===================================")
+    print("Hotel Agent")
+    print("===================================\n")
+
+    planner = state["planner_output"]
+
+    hotel_output = hotel_chain.invoke(
+        {
+            "trip_requirements":
+            planner.model_dump_json(indent=2)
+        }
+    )
+
+    print(hotel_output.model_dump_json(indent=2))
+
+    return {
+
+        "hotel_output": hotel_output
+
+    }
 
 # ============================================================
 # MEMORY
@@ -474,8 +526,8 @@ graph.add_node(
 )
 
 graph.add_node(
-    "planning",
-    planning_pipeline_node,
+    "hotel",
+    hotel_node,
 )
 
 # ---------------- Edges ----------------
@@ -500,7 +552,7 @@ graph.add_conditional_edges(
     route_after_router,
     {
         "clarification": "clarification",
-        "planning": "planning",
+        "hotel": "hotel",
     },
 )
 
@@ -510,7 +562,7 @@ graph.add_edge(
 )
 
 graph.add_edge(
-    "planning",
+    "hotel",
     END,
 )
 
@@ -560,42 +612,82 @@ def display_trip_requirements(
     requirements: TripRequirements,
 ):
 
-    print("\n==============================")
-    print("Trip Requirements")
-    print("==============================")
+    print("\n========================================")
+    print("        TRIP REQUIREMENTS")
+    print("========================================")
 
-    print(f"Destination   : {requirements.destination}")
-    print(f"Duration      : {requirements.duration_days}")
-    print(f"Budget        : {requirements.budget}")
-    print(f"Travelers     : {requirements.travelers}")
-    print(f"Travel Style  : {requirements.travel_style}")
+    print(f"Destination     : {requirements.destination or 'Not Provided'}")
+    print(f"Duration        : {requirements.duration_days or 'Not Provided'}")
+    print(f"Budget          : {requirements.budget or 'Not Provided'}")
+    print(f"Travelers       : {requirements.travelers or 'Not Provided'}")
+    print(f"Travel Style    : {requirements.travel_style or 'Not Provided'}")
+    print(f"Start Date      : {requirements.start_date or 'Not Provided'}")
+
+    # ---------------- Interests ----------------
 
     print("\nInterests")
+    print("----------------------------------------")
 
     if requirements.interests:
-
         for interest in requirements.interests:
-
             print(f"• {interest}")
-
     else:
-
         print("None")
+
+    # ---------------- Preferences ----------------
+
+    print("\nUser Preferences")
+    print("----------------------------------------")
+
+    prefs = requirements.preferences
+
+    print(
+        f"Accommodation : {prefs.accommodation_type or 'Not Provided'}"
+    )
+
+    print(
+        f"Transport     : {prefs.transport_preference or 'Not Provided'}"
+    )
+
+    print("Food Preferences")
+
+    if prefs.food_preferences:
+        for food in prefs.food_preferences:
+            print(f"• {food}")
+    else:
+        print("None")
+
+    print("\nAccessibility Needs")
+
+    if prefs.accessibility_needs:
+        for need in prefs.accessibility_needs:
+            print(f"• {need}")
+    else:
+        print("None")
+
+    # ---------------- Special Requests ----------------
+
+    print("\nSpecial Requests")
+    print("----------------------------------------")
+
+    if requirements.special_requests:
+        for request in requirements.special_requests:
+            print(f"• {request}")
+    else:
+        print("None")
+
+    # ---------------- Missing Fields ----------------
 
     print("\nMissing Fields")
+    print("----------------------------------------")
 
     if requirements.missing_fields:
-
         for field in requirements.missing_fields:
-
             print(f"• {field}")
-
     else:
-
         print("None")
 
-    print()
-
+    print("\n========================================\n")
 # ============================================================
 # MAIN
 # ============================================================
@@ -636,21 +728,23 @@ if __name__ == "__main__":
 
         else:
 
-            print("\nPlanning Pipeline Ready\n")
+            print("\n==============================")
+            print("HOTEL RECOMMENDATIONS")
+            print("==============================")
 
-    print("\n========================================")
-    print("      Welcome to VoyAgent AI")
-    print("========================================\n")
+            hotels = result["hotel_output"].hotels
 
-    while True:
+            for i, hotel in enumerate(hotels, start=1):
 
-        prompt = input("You : ")
+                print(f"\nHotel {i}")
 
-        if prompt.lower() in ["exit", "quit"]:
-            break
+                print(f"Name       : {hotel.name}")
+                print(f"Location   : {hotel.location}")
+                print(f"Price      : ₹{hotel.price_per_night}/night")
+                print(f"Rating     : {hotel.rating}")
 
-        result = run_graph(prompt)
+                print("Amenities")
 
-        requirements = result["planner_output"]
+                for amenity in hotel.amenities:
+                    print(f"• {amenity}")
 
-        display_trip_requirements(requirements)
