@@ -367,47 +367,38 @@ def clarification_node(state: TravelState):
 
     planner = state["planner_output"]
 
-    questions = {
-
-        "destination":
-            "Which destination would you like to visit?",
-
-        "duration_days":
-            "How many days will your trip be?",
-
-        "budget":
-            "What's your approximate budget?",
-
-        "travelers":
-            "How many travelers are going?",
-
-        "travel_style":
-            "What kind of trip are you looking for? (Luxury, Budget, Adventure, Family...)"
-
+    question_map = {
+        "destination": "Which destination would you like to visit?",
+        "duration_days": "How many days is your trip?",
+        "budget": "What's your approximate budget?",
+        "travelers": "How many travelers are going?",
+        "travel_style": "What type of trip do you want (Luxury, Budget, Adventure...)?"
     }
 
-    response = (
+    questions = [
+        question_map[field]
+        for field in planner.missing_fields
+    ]
+
+    message = (
         "Before I continue planning your trip, "
-        "I need a little more information.\n\n"
+        "I need a little more information:\n\n"
     )
 
-    for field in planner.missing_fields:
+    for question in questions:
+        message += f"• {question}\n"
 
-        response += f"• {questions[field]}\n"
-
-    print("\n========================================")
-    print("Clarification Agent")
-    print("========================================")
-    print(response)
+    clarification = ClarificationResponse(
+        questions=questions,
+        message=message,
+    )
 
     return {
-
+        "clarification_output": clarification,
         "messages": [
-            AIMessage(content=response)
+            AIMessage(content=message)
         ],
-
-        "current_agent": "clarification"
-
+        "current_agent": "clarification",
     }
 
 
