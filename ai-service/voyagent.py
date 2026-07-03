@@ -151,7 +151,11 @@ class HotelRecommendation(BaseModel):
 
     location: str
 
-    price_per_night: int
+    price_per_night: float
+
+    currency: str
+
+    booking_url: str | None
 
     rating: float
 
@@ -169,13 +173,23 @@ class FlightRecommendation(BaseModel):
 
     airline: str
 
-    departure: str
+    flight_number: str
 
-    arrival: str
+    departure_airport: str
 
-    price: int
+    arrival_airport: str
+
+    departure_time: str | None
+
+    arrival_time: str | None
 
     duration: str
+
+    price: float
+
+    currency: str
+
+    stops: int
 
 
 class FlightRecommendations(BaseModel):
@@ -456,15 +470,62 @@ Return ONLY the HotelRecommendations schema.
 )
 
 
+# 1.1 Flight Prompt
+flight_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+You are the Flight Recommendation Agent of VoyAgent.
+
+Your ONLY responsibility is recommending flights.
+
+You will receive TripRequirements.
+
+Recommend exactly 3 suitable flight options.
+
+Recommendations should consider:
+
+- destination
+- budget
+- travel style
+- travelers
+
+Return ONLY the FlightRecommendations schema.
+
+Do NOT generate:
+
+- hotels
+- itinerary
+- travel tips
+"""
+        ),
+
+        (
+            "human",
+            "{planner_output}"
+        ),
+    ]
+)
+
+
+
 # 2. Hotel LLM
 
 hotel_llm = llm.with_structured_output(
     HotelRecommendations
 )
 
-# 3. Hotel Chain
+# 2.1 Flight LLM
+flight_llm = llm.with_structured_output(
+    FlightRecommendations
+)
 
+# 3. Hotel Chain
 hotel_chain = hotel_prompt | hotel_llm
+
+# 3.1 Flight Chain
+flight_chain = flight_prompt | flight_llm
 
 # 4. Hotel Node
 
@@ -488,6 +549,36 @@ def hotel_node(state: TravelState):
     return {
 
         "hotel_output": hotel_output
+
+    }
+
+# 4.1 Flight Node
+def flight_node(state: TravelState):
+
+    print("\n===================================")
+    print("Flight Agent")
+    print("===================================\n")
+
+    planner = state["planner_output"]
+
+    flight_output = flight_chain.invoke(
+        {
+            "planner_output":
+            planner.model_dump_json(indent=2)
+        }
+    )
+
+    print("\nGenerated Flights\n")
+
+    for flight in flight_output.flights:
+
+        print(f"- {flight.airline}")
+
+    return {
+
+        "flight_output": flight_output,
+
+        "current_agent":"flight"
 
     }
 
@@ -530,6 +621,11 @@ graph.add_node(
     hotel_node,
 )
 
+graph.add_node(
+    "flight",
+    flight_node,
+)
+
 # ---------------- Edges ----------------
 
 graph.add_edge(
@@ -563,7 +659,12 @@ graph.add_edge(
 
 graph.add_edge(
     "hotel",
-    END,
+    "flight",
+)
+
+graph.add_edge(
+    "flight",
+    END
 )
 
 # ============================================================
@@ -740,11 +841,31 @@ if __name__ == "__main__":
 
                 print(f"Name       : {hotel.name}")
                 print(f"Location   : {hotel.location}")
-                print(f"Price      : ₹{hotel.price_per_night}/night")
+                print(
+                   f"Price : {hotel.currency} {hotel.price_per_night}/night")
                 print(f"Rating     : {hotel.rating}")
 
                 print("Amenities")
 
                 for amenity in hotel.amenities:
                     print(f"• {amenity}")
+            
+
+            if result.get("flight_output"):
+
+                print("\n==============================")
+                print("FLIGHT RECOMMENDATIONS")
+                print("==============================")
+
+                for flight in result["flight_output"].flights:
+
+                    print(f"\n✈ Airline      : {flight.airline}")
+                    print(f"Flight No.     : {flight.flight_number}")
+                    print(f"From           : {flight.departure_airport}")
+                    print(f"To             : {flight.arrival_airport}")
+                    print(f"Departure      : {flight.departure_time}")
+                    print(f"Arrival        : {flight.arrival_time}")
+                    print(f"Duration       : {flight.duration}")
+                    print(f"Stops          : {flight.stops}")
+                    print(f"Price          : {flight.currency} {flight.price}")
 
