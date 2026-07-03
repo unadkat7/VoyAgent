@@ -207,6 +207,12 @@ class Activity(BaseModel):
 
     description: str
 
+    location: str
+
+    estimated_cost: float
+
+    notes: str | None = None
+
 
 class DayPlan(BaseModel):
 
@@ -220,7 +226,6 @@ class DayPlan(BaseModel):
 class DetailedItinerary(BaseModel):
 
     itinerary: list[DayPlan]
-
 
 # ---------------- FINAL RESPONSE ----------------
 
@@ -508,7 +513,49 @@ Do NOT generate:
     ]
 )
 
+# 1.2 Itinerary Prompt
+itinerary_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+You are the Itinerary Agent of VoyAgent.
 
+Your ONLY responsibility is creating a day-wise travel itinerary.
+
+You will receive TripRequirements.
+
+Generate a detailed itinerary.
+
+Each day should include:
+
+- Morning
+- Afternoon
+- Evening
+
+Recommend attractions that match:
+
+- destination
+- duration
+- travel style
+- interests
+
+Keep the itinerary practical.
+
+Do NOT recommend hotels.
+
+Do NOT recommend flights.
+
+Return ONLY the DetailedItinerary schema.
+"""
+        ),
+
+        (
+            "human",
+            "{planner_output}"
+        ),
+    ]
+)
 
 # 2. Hotel LLM
 
@@ -521,11 +568,19 @@ flight_llm = llm.with_structured_output(
     FlightRecommendations
 )
 
+# 2.2 Itinerary LLM
+itinerary_llm = llm.with_structured_output(
+    DetailedItinerary
+)
+
 # 3. Hotel Chain
 hotel_chain = hotel_prompt | hotel_llm
 
 # 3.1 Flight Chain
 flight_chain = flight_prompt | flight_llm
+
+# 3.2 Itinerary Chain
+itinerary_chain = itinerary_prompt | itinerary_llm
 
 # 4. Hotel Node
 
@@ -582,6 +637,37 @@ def flight_node(state: TravelState):
 
     }
 
+# 4.2 Itinerary Node
+def itinerary_node(state: TravelState):
+
+    print("\n===================================")
+    print("Itinerary Agent")
+    print("===================================\n")
+
+    planner = state["planner_output"]
+
+    itinerary_output = itinerary_chain.invoke(
+        {
+            "planner_output":
+            planner.model_dump_json(indent=2)
+        }
+    )
+
+
+    print("\nGenerated Itinerary\n")
+
+    for day in itinerary_output.itinerary:
+
+        print(f"Day {day.day} : {day.title}")
+
+    return {
+
+        "itinerary_output": itinerary_output,
+
+        "current_agent":"itinerary"
+
+    }
+
 # ============================================================
 # MEMORY
 # ============================================================
@@ -626,6 +712,11 @@ graph.add_node(
     flight_node,
 )
 
+graph.add_node(
+    "itinerary",
+    itinerary_node,
+)
+
 # ---------------- Edges ----------------
 
 graph.add_edge(
@@ -664,6 +755,11 @@ graph.add_edge(
 
 graph.add_edge(
     "flight",
+    "itinerary"
+)
+
+graph.add_edge(
+    "itinerary",
     END
 )
 
@@ -797,6 +893,8 @@ def display_trip_requirements(
 # MAIN
 # ============================================================
 
+
+
 if __name__ == "__main__":
 
     print("\n========================================")
@@ -869,3 +967,23 @@ if __name__ == "__main__":
                     print(f"Stops          : {flight.stops}")
                     print(f"Price          : {flight.currency} {flight.price}")
 
+            if result.get("itinerary_output"):
+
+                print("\n==============================")
+                print("ITINERARY")
+                print("==============================")
+
+                for day in result["itinerary_output"].itinerary:
+
+                    print(f"\n📅 Day {day.day}: {day.title}")
+
+                    for activity in day.activities:
+
+                        print(f"\n🕒 {activity.time}")
+                        print(f"Activity : {activity.title}")
+                        print(f"Location : {activity.location}")
+                        print(f"Description : {activity.description}")
+                        print(f"Estimated Cost : {activity.estimated_cost}")
+
+                        if activity.notes:
+                            print(f"Notes : {activity.notes}")
