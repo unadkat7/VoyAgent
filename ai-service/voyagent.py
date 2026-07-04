@@ -231,13 +231,17 @@ class DetailedItinerary(BaseModel):
 
 class FinalTravelPlan(BaseModel):
 
+    summary: str
+
     destination: str
 
     duration_days: int
 
     budget: int
 
-    summary: str
+    travelers: int
+
+    travel_style: str
 
     hotels: list[HotelRecommendation]
 
@@ -245,7 +249,7 @@ class FinalTravelPlan(BaseModel):
 
     itinerary: list[DayPlan]
 
-    travel_tips: list[str]
+    important_tips: list[str]
 
 
 # ============================================================
@@ -557,6 +561,67 @@ Return ONLY the DetailedItinerary schema.
     ]
 )
 
+#composer prompt
+composer_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+You are the Response Composer Agent of VoyAgent.
+
+Your ONLY responsibility is combining the outputs
+of all specialist agents.
+
+You will receive:
+
+1. Planner Output
+2. Hotel Recommendations
+3. Flight Recommendations
+4. Detailed Itinerary
+
+Generate:
+
+- A short trip summary.
+- Important travel tips.
+
+Do NOT modify:
+
+- Hotels
+- Flights
+- Itinerary
+
+Simply combine them into one FinalTravelPlan.
+
+Return ONLY the FinalTravelPlan schema.
+"""
+        ),
+
+        (
+            "human",
+            """
+Planner Output:
+
+{planner_output}
+
+
+Hotel Recommendations:
+
+{hotel_output}
+
+
+Flight Recommendations:
+
+{flight_output}
+
+
+Itinerary:
+
+{itinerary_output}
+"""
+        ),
+    ]
+)
+
 # 2. Hotel LLM
 
 hotel_llm = llm.with_structured_output(
@@ -573,6 +638,11 @@ itinerary_llm = llm.with_structured_output(
     DetailedItinerary
 )
 
+#composer llm
+composer_llm = llm.with_structured_output(
+    FinalTravelPlan
+)
+
 # 3. Hotel Chain
 hotel_chain = hotel_prompt | hotel_llm
 
@@ -581,6 +651,9 @@ flight_chain = flight_prompt | flight_llm
 
 # 3.2 Itinerary Chain
 itinerary_chain = itinerary_prompt | itinerary_llm
+
+composer_chain = composer_prompt | composer_llm
+
 
 # 4. Hotel Node
 
@@ -668,6 +741,50 @@ def itinerary_node(state: TravelState):
 
     }
 
+def response_composer_node(state: TravelState):
+
+    print("\n===================================")
+    print("Response Composer Agent")
+    print("===================================\n")
+
+    planner = state["planner_output"]
+
+    hotels = state["hotel_output"]
+
+    flights = state["flight_output"]
+
+    itinerary = state["itinerary_output"]
+
+    final_output = composer_chain.invoke(
+
+        {
+
+            "planner_output":
+            planner.model_dump_json(indent=2),
+
+            "hotel_output":
+            hotels.model_dump_json(indent=2),
+
+            "flight_output":
+            flights.model_dump_json(indent=2),
+
+            "itinerary_output":
+            itinerary.model_dump_json(indent=2),
+
+        }
+
+    )
+
+    print("\nFinal Travel Plan Created\n")
+
+    return {
+
+        "final_output": final_output,
+
+        "current_agent": "composer"
+
+    }
+
 # ============================================================
 # MEMORY
 # ============================================================
@@ -717,6 +834,10 @@ graph.add_node(
     itinerary_node,
 )
 
+graph.add_node(
+    "composer",
+    response_composer_node,
+)
 # ---------------- Edges ----------------
 
 graph.add_edge(
@@ -760,6 +881,11 @@ graph.add_edge(
 
 graph.add_edge(
     "itinerary",
+    "composer"
+)
+
+graph.add_edge(
+    "composer",
     END
 )
 
@@ -885,6 +1011,7 @@ def display_trip_requirements(
         print("None")
 
     print("\n========================================\n")
+
 # ============================================================
 # MAIN
 # ============================================================
@@ -987,3 +1114,19 @@ if __name__ == "__main__":
 
                         if activity.notes:
                             print(f"Notes : {activity.notes}")
+            
+            if result.get("final_output"):
+
+                final = result["final_output"]
+
+                print("\n========================================")
+                print("FINAL TRAVEL PLAN")
+                print("========================================")
+
+                print(final.summary)
+
+                print("\nTravel Tips")
+
+                for tip in final.important_tips:
+
+                    print(f"• {tip}")
