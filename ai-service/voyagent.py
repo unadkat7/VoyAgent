@@ -785,6 +785,17 @@ def response_composer_node(state: TravelState):
 
     }
 
+
+def planning_node(state: TravelState):
+
+    print("\n===================================")
+    print("Planning Coordinator")
+    print("===================================\n")
+
+    print("Dispatching specialist agents...\n")
+
+    return {}
+
 # ============================================================
 # MEMORY
 # ============================================================
@@ -802,6 +813,10 @@ graph = StateGraph(TravelState)
 graph.add_node(
     "supervisor",
     supervisor_node,
+)
+graph.add_node(
+    "planning",
+    planning_node
 )
 
 graph.add_node(
@@ -855,13 +870,19 @@ graph.add_edge(
     "router",
 )
 
-graph.add_conditional_edges(
-    "router",
-    route_after_router,
-    {
-        "clarification": "clarification",
-        "hotel": "hotel",
-    },
+graph.add_edge(
+    "planning",
+    "hotel"
+)
+
+graph.add_edge(
+    "planning",
+    "flight"
+)
+
+graph.add_edge(
+    "planning",
+    "itinerary"
 )
 
 graph.add_edge(
@@ -869,19 +890,13 @@ graph.add_edge(
     END,
 )
 
-graph.add_edge(
-    "hotel",
-    "flight",
-)
-
-graph.add_edge(
-    "flight",
-    "itinerary"
-)
-
-graph.add_edge(
-    "itinerary",
-    "composer"
+graph.add_conditional_edges(
+    "router",
+    route_after_router,
+    {
+        "clarification":"clarification",
+        "planning":"planning"
+    }
 )
 
 graph.add_edge(
