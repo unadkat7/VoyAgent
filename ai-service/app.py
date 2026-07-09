@@ -7,7 +7,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-app.include_router(planner_router)
+app.include_router(
+    planner_router,
+    prefix="/planner",
+    tags=["Planner"],
+)
 
 @app.get("/")
 def home():
