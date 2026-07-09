@@ -22,11 +22,9 @@ class ClarificationResponse(BaseModel):
 class TripRequirements(BaseModel):
 
     destination: str | None = None
-
     duration_days: int | None = None
 
     budget: int | None = None
-
     travelers: int | None = None
 
     travel_style: str | None = None
@@ -38,6 +36,7 @@ class TripRequirements(BaseModel):
     )
 
     start_date: str | None = None
+    end_date: str | None = None          # NEW
 
     special_requests: list[str] = Field(default_factory=list)
 

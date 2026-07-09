@@ -1,3 +1,5 @@
+import json
+
 from schemas.planner import TripRequirements
 from schemas.hotel import HotelRecommendation
 from schemas.flight import FlightRecommendation
@@ -110,9 +112,9 @@ def display_hotel_recommendations(hotels: list[HotelRecommendation]):
 
         print(f"Name       : {hotel.name}")
         print(f"Location   : {hotel.location}")
-        print(
-           f"Price : {hotel.currency} {hotel.price_per_night}/night")
-        print(f"Rating     : {hotel.rating}")
+        print(f"Rating     : {hotel.rating}")       
+        print(f"Hotel Class : {hotel.hotel_class} Star")
+        print(f"Image URL   : {hotel.image_url}")
 
         print("Amenities")
 
