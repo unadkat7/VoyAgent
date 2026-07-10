@@ -21,6 +21,7 @@ class ClarificationResponse(BaseModel):
 
 class TripRequirements(BaseModel):
 
+    departure: str | None = None
     destination: str | None = None
     duration_days: int | None = None
 

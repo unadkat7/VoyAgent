@@ -12,6 +12,7 @@ def clarification_node(state: TravelState):
     planner = state["planner_output"]
 
     question_map = {
+        "departure": "Where will you be departing from (your city or airport)?",
         "destination": "Which destination would you like to visit?",
         "duration_days": "How many days is your trip?",
         "budget": "What's your approximate budget?",
@@ -20,7 +21,7 @@ def clarification_node(state: TravelState):
     }
 
     questions = [
-        question_map[field]
+        question_map.get(field, f"Please specify {field}.")
         for field in planner.missing_fields
     ]
 

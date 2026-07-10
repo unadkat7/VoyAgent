@@ -10,7 +10,7 @@ from schemas.hotel import (
 )
 
 from schemas.planner import TripRequirements
-from .currency import get_currency
+from .currency import get_currency, convert_to_inr
 from .date_utils import calculate_trip_dates
 load_dotenv()
 
@@ -18,7 +18,7 @@ SERP_API_KEY = os.getenv("SERPAPI_KEY")
 
 BASE_URL = "https://serpapi.com/search"
 
-def convert_property(property_data: dict, default_currency: str = "USD") -> HotelRecommendation:
+def convert_property(property_data: dict, default_currency: str = "INR") -> HotelRecommendation:
 
     nearby_places = property_data.get("nearby_places", [])
 
@@ -46,22 +46,25 @@ def convert_property(property_data: dict, default_currency: str = "USD") -> Hote
     # ------------------------------------
 
     if price_text.startswith("$"):
-        currency = "USD"
-
+        detected_currency = "USD"
     elif price_text.startswith("₹") or "\u20b9" in price_text:
-        currency = "INR"
-
+        detected_currency = "INR"
     elif price_text.startswith("€"):
-        currency = "EUR"
-
+        detected_currency = "EUR"
     elif price_text.startswith("£"):
-        currency = "GBP"
-
+        detected_currency = "GBP"
     elif price_text.startswith("AED"):
-        currency = "AED"
-
+        detected_currency = "AED"
     else:
-        currency = default_currency
+        detected_currency = default_currency
+
+    # Standardize all output prices to INR
+    if detected_currency != "INR":
+        price = convert_to_inr(float(price), detected_currency)
+        currency = "INR"
+    else:
+        price = float(price)
+        currency = "INR"
 
     return HotelRecommendation(
 
@@ -106,7 +109,7 @@ def convert_property(property_data: dict, default_currency: str = "USD") -> Hote
         ),
     )
 
-def parse_hotels(raw_response: dict, trip_requirements: TripRequirements = None, default_currency: str = "USD", max_price_per_night: int = None) -> HotelRecommendations:
+def parse_hotels(raw_response: dict, trip_requirements: TripRequirements = None, default_currency: str = "INR", max_price_per_night: int = None) -> HotelRecommendations:
 
     properties = raw_response.get("properties", [])
 
@@ -121,6 +124,9 @@ def parse_hotels(raw_response: dict, trip_requirements: TripRequirements = None,
     if max_price_per_night:
         if (default_currency == "INR" and max_price_per_night <= 2500) or (default_currency == "USD" and max_price_per_night <= 35):
             is_budget = True
+        else:
+            # If the daily hotel budget is generous (> 2500 INR/night), do not treat as a low-tier/hostel search
+            is_budget = False
 
     filtered_properties = []
     for property_data in properties:
@@ -140,9 +146,14 @@ def parse_hotels(raw_response: dict, trip_requirements: TripRequirements = None,
         name = property_data.get("name", "").lower()
         prop_type = property_data.get("type", "").lower()
 
-        # If not budget requested, filter out dorm beds and hostels to ensure accurate/realistic hotel prices
+        # If not budget requested, filter out dorm beds, hostels, apartments, rented rooms, and homestays
         if not is_budget:
-            if "hostel" in name or "zostel" in name or "backpack" in name or prop_type == "hostel":
+            non_hotel_keywords = [
+                "hostel", "zostel", "backpack", "apartment", "homestay", "home stay",
+                "guest house", "guesthouse", "villa", "cottage", "rented", "rental",
+                "residence", "service apartment", "room stay"
+            ]
+            if any(kw in name for kw in non_hotel_keywords) or any(kw in prop_type for kw in non_hotel_keywords):
                 continue
             # Also filter out abnormally low dorm rates (< 1500 INR or < 25 USD) when standard hotels/resorts are expected
             if default_currency == "INR" and price < 1500:
@@ -159,6 +170,26 @@ def parse_hotels(raw_response: dict, trip_requirements: TripRequirements = None,
         filtered_properties = [p for p in properties if p.get("rate_per_night", {}).get("extracted_lowest", 0) > 0]
         if not filtered_properties:
             filtered_properties = properties
+
+    # Sort properties so that highest-rated hotels closest to the user's budget capacity come first
+    if max_price_per_night and max_price_per_night > 0:
+        def score_property(p):
+            rate = p.get("rate_per_night", {})
+            price = rate.get("extracted_lowest") or rate.get("extracted_before_taxes_fees") or 0
+            rating = float(p.get("overall_rating", 0))
+            
+            # Score based on how well the hotel utilizes the available budget combined with overall rating
+            budget_ratio = min(price / max_price_per_night, 1.0)
+            if not is_budget and budget_ratio < 0.4:
+                # Penalize bottom-tier cheap hotels when budget can afford nicer 3-star/4-star properties
+                price_score = budget_ratio * 0.5
+            else:
+                price_score = budget_ratio
+            return (rating * 2.0) + (price_score * 5.0)
+
+        filtered_properties.sort(key=score_property, reverse=True)
+    else:
+        filtered_properties.sort(key=lambda p: float(p.get("overall_rating", 0)), reverse=True)
 
     hotels = []
 
@@ -182,9 +213,8 @@ def search_hotels(
         trip_requirements.duration_days,
     )
 
-    currency = get_currency(
-        trip_requirements.destination
-    )
+    # Standardize all requests to INR as primary departure/user base is India
+    currency = "INR"
 
     # Calculate duration days accurately
     duration_days = trip_requirements.duration_days
@@ -206,11 +236,19 @@ def search_hotels(
         max_price_per_night = int((trip_requirements.budget * 0.5) / duration_days)
         print(f"\n[Budget Rule] Total Budget: {trip_requirements.budget} {currency} | Duration: {duration_days} days -> Max Hotel Budget: {max_price_per_night} {currency}/night")
 
-    # Build intelligent search query so Google Hotels returns actual hotels & resorts tailored to preferences
+    # Build intelligent search query so Google Hotels returns actual hotels & resorts tailored to preferences & budget
     search_query_parts = [trip_requirements.destination or ""]
 
     if trip_requirements.preferences and trip_requirements.preferences.accommodation_type:
         search_query_parts.append(trip_requirements.preferences.accommodation_type)
+    elif max_price_per_night and max_price_per_night > 2500:
+        # When budget allows > 2500/night, query standard/nice 3-star and 4-star hotels even if general style says 'budget travel'
+        if trip_requirements.travel_style and "luxury" in trip_requirements.travel_style.lower():
+            search_query_parts.append("luxury hotels resorts")
+        elif trip_requirements.travel_style and "resort" in trip_requirements.travel_style.lower():
+            search_query_parts.append("resorts")
+        else:
+            search_query_parts.append("hotels")
     elif trip_requirements.travel_style:
         style = trip_requirements.travel_style.lower()
         if "luxury" in style:

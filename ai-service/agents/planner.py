@@ -23,19 +23,24 @@ The input is the COMPLETE conversation between the user and the assistant.
 Your task is to combine all information from the conversation
 and extract the latest travel requirements.
 
-Never guess.
+The following 6 fields are REQUIRED for trip planning:
+- departure (the city/airport the user is starting their journey from)
+- destination
+- duration_days
+- budget
+- travelers
+- travel_style
 
-Never assume.
+Never guess or assume values. Only extract information explicitly mentioned.
 
-Only extract information explicitly mentioned.
+If ANY of the 6 required fields are not explicitly mentioned in the conversation:
+1. Leave that field as null.
+2. You MUST add the name of every unmentioned required field to the missing_fields list.
 
-If information is missing,
-leave the field as null.
+For example, if the user does not mention where they are departing from, you MUST include "departure" in missing_fields.
 
-Populate the missing_fields list.
-
-Possible missing fields:
-
+Possible missing fields values:
+- departure
 - destination
 - duration_days
 - budget

@@ -1,59 +1,11 @@
-from langchain_core.prompts import ChatPromptTemplate
-from llm.gemini import llm
-from schemas.flight import FlightRecommendations
 from graph.state import TravelState
+from tools.flight_search import search_flights
 
 
-# 1.1 Flight Prompt
-flight_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """
-You are the Flight Recommendation Agent of VoyAgent.
+# ============================================================
+# FLIGHT NODE
+# ============================================================
 
-Your ONLY responsibility is recommending flights.
-
-You will receive TripRequirements.
-
-Recommend exactly 3 suitable flight options.
-
-Recommendations should consider:
-
-- destination
-- budget
-- travel style
-- travelers
-
-Return ONLY the FlightRecommendations schema.
-
-Do NOT generate:
-
-- hotels
-- itinerary
-- travel tips
-"""
-        ),
-
-        (
-            "human",
-            "{planner_output}"
-        ),
-    ]
-)
-
-
-# 2.1 Flight LLM
-flight_llm = llm.with_structured_output(
-    FlightRecommendations
-)
-
-
-# 3.1 Flight Chain
-flight_chain = flight_prompt | flight_llm
-
-
-# 4.1 Flight Node
 def flight_node(state: TravelState):
 
     print("\n===================================")
@@ -62,23 +14,18 @@ def flight_node(state: TravelState):
 
     planner = state["planner_output"]
 
-    flight_output = flight_chain.invoke(
-        {
-            "planner_output":
-            planner.model_dump_json(indent=2)
-        }
-    )
+    flight_output = search_flights(planner)
 
     print("\nGenerated Flights\n")
 
     for flight in flight_output.flights:
 
-        print(f"- {flight.airline}")
+        print(f"- {flight.airline} ({flight.flight_number}) | {flight.departure_airport} -> {flight.arrival_airport} | {flight.currency} {flight.price}")
 
     return {
 
         "flight_output": flight_output,
 
-        "current_agent":"flight"
+        "current_agent": "flight"
 
     }

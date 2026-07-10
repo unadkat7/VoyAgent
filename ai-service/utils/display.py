@@ -19,6 +19,7 @@ def display_trip_requirements(
     print("        TRIP REQUIREMENTS")
     print("========================================")
 
+    print(f"Departure       : {requirements.departure or 'Not Provided'}")
     print(f"Destination     : {requirements.destination or 'Not Provided'}")
     print(f"Duration        : {requirements.duration_days or 'Not Provided'}")
     print(f"Budget          : {requirements.budget or 'Not Provided'}")
