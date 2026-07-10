@@ -112,9 +112,12 @@ def display_hotel_recommendations(hotels: list[HotelRecommendation]):
 
         print(f"Name       : {hotel.name}")
         print(f"Location   : {hotel.location}")
+        print(f"Price      : {hotel.currency} {hotel.price_per_night}")
         print(f"Rating     : {hotel.rating}")       
-        print(f"Hotel Class : {hotel.hotel_class} Star")
-        print(f"Image URL   : {hotel.image_url}")
+        print(f"Hotel Class: {hotel.hotel_class or 'N/A'}")
+        if hotel.booking_url:
+            print(f"Booking URL: {hotel.booking_url}")
+        print(f"Image URL  : {hotel.image_url}")
 
         print("Amenities")
 
