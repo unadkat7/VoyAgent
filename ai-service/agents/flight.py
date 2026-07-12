@@ -23,9 +23,5 @@ def flight_node(state: TravelState):
         print(f"- {flight.airline} ({flight.flight_number}) | {flight.departure_airport} -> {flight.arrival_airport} | {flight.currency} {flight.price}")
 
     return {
-
         "flight_output": flight_output,
-
-        "current_agent": "flight"
-
     }

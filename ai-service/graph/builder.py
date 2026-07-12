@@ -109,21 +109,33 @@ graph.add_edge(
     END,
 )
 
-# ---------------- Planning Pipeline ----------------
+# ---------------- 3-Way Parallel Planning Pipeline ----------------
 
+# Fan-out: Planning Coordinator dispatches Hotel, Flight, and Itinerary agents simultaneously
 graph.add_edge(
     "planning",
     "hotel",
 )
 
 graph.add_edge(
-    "hotel",
+    "planning",
     "flight",
 )
 
 graph.add_edge(
-    "flight",
+    "planning",
     "itinerary",
+)
+
+# Fan-in: Response Composer Agent waits until all 3 parallel branches complete
+graph.add_edge(
+    "hotel",
+    "composer",
+)
+
+graph.add_edge(
+    "flight",
+    "composer",
 )
 
 graph.add_edge(

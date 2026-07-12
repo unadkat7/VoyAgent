@@ -23,9 +23,5 @@ def hotel_node(state: TravelState):
         print(f"- {hotel.name}")
 
     return {
-
         "hotel_output": hotel_output,
-
-        "current_agent": "hotel"
-
     }

@@ -83,9 +83,5 @@ def itinerary_node(state: TravelState):
         print(f"Day {day.day} : {day.title}")
 
     return {
-
         "itinerary_output": itinerary_output,
-
-        "current_agent":"itinerary"
-
     }
