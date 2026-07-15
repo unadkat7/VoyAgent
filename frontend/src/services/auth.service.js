@@ -20,6 +20,13 @@ export const logout = async () => {
 
 // Current User
 export const getCurrentUser = async () => {
-  const response = await api.get("/auth/me");
-  return response.data;
+  try {
+    const response = await api.get("/auth/me");
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 401) {
+      return null;
+    }
+    throw error;
+  }
 };

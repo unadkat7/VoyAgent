@@ -20,17 +20,7 @@ export const planTrip = async (req, res) => {
     const userId = req.user._id;
     const threadId = providedThreadId || `${userId}_trip_${Date.now()}`;
 
-    console.log(`📡 Forwarding prompt to AI Service [threadId: ${threadId}]...`);
-
-    // Call FastAPI AI microservice
-    const aiResponse = await axios.post(`${AI_SERVICE_URL}/planner/plan-trip`, {
-      prompt,
-      thread_id: threadId,
-    });
-
-    const aiData = aiResponse.data;
-
-    // Find existing trip session or initialize a new one
+    // Find existing trip session or initialize a new one in MongoDB first to preserve full multi-turn context
     let trip = await Trip.findOne({ userId, threadId });
 
     if (!trip) {
@@ -42,6 +32,17 @@ export const planTrip = async (req, res) => {
     } else {
       trip.promptHistory.push(prompt);
     }
+
+    const fullPromptContext = trip.promptHistory.join("\nUser: ");
+    console.log(`📡 Forwarding full prompt history (${trip.promptHistory.length} turns) to AI Service [threadId: ${threadId}]...`);
+
+    // Call FastAPI AI microservice with the combined multi-turn prompt history
+    const aiResponse = await axios.post(`${AI_SERVICE_URL}/planner/plan-trip`, {
+      prompt: fullPromptContext,
+      thread_id: threadId,
+    });
+
+    const aiData = aiResponse.data;
 
     if (aiData.status === "clarification_needed") {
       trip.status = "clarification_needed";

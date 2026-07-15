@@ -24,7 +24,8 @@ def router_node(state: TravelState):
     print("All required information collected.")
 
     return {
-        "current_agent": "planning"
+        "current_agent": "planning",
+        "clarification_output": None
     }
 
 
