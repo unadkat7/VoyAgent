@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Plane, Calendar, ArrowLeft, Trash2, MapPin,
   Star, CheckCircle2, ExternalLink, Loader2, ShieldAlert, Sparkles,
+  IndianRupee,
 } from "lucide-react";
 import { getTripById, deleteTrip } from "@/services/trip.service";
 import Skeleton from "@/components/ui/Skeleton";
@@ -18,6 +19,96 @@ function getDestination(prompt) {
   const match = prompt.match(/to\s+([A-Za-z][a-zA-Z\s]{1,20}?)(?:\s+for|\s+in\s|\.|,|$)/i);
   if (match) return match[1].trim();
   return prompt.split(" ").slice(0, 4).join(" ");
+}
+
+// Helper: Format hotel price properly with ₹/INR
+function formatHotelPrice(price) {
+  if (!price) return "₹4,500 / night";
+  const str = String(price);
+  if (str.toLowerCase().includes("free")) return "Free";
+  const match = str.replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    return `₹${num.toLocaleString("en-IN")} / night`;
+  }
+  return str.startsWith("₹") || str.toLowerCase().includes("inr") ? str : `₹${str} / night`;
+}
+
+// Helper: Format flight price properly with ₹/INR
+function formatFlightPrice(price) {
+  if (!price) return "₹5,200";
+  const str = String(price);
+  if (str.toLowerCase().includes("free")) return "Free";
+  const match = str.replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    return `₹${num.toLocaleString("en-IN")}`;
+  }
+  return str.startsWith("₹") || str.toLowerCase().includes("inr") ? str : `₹${str}`;
+}
+
+// Helper: Format activity cost properly with ₹/INR
+function formatActivityCost(cost) {
+  if (!cost) return null;
+  const str = String(cost);
+  if (str.toLowerCase().includes("free") || str.trim() === "0" || str.toLowerCase() === "included") return "Free";
+  const match = str.replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+  if (match) {
+    const num = parseFloat(match[1]);
+    return `₹${num.toLocaleString("en-IN")}`;
+  }
+  return str.startsWith("₹") || str.toLowerCase().includes("inr") ? str : `₹${str}`;
+}
+
+// Helper: Calculate approx cost range (1 hotel + 1 flight)
+function calculateTripCostRange(hotels = [], flights = [], itineraryDays = []) {
+  const hotelNums = hotels
+    .map((h) => {
+      const match = String(h.price_per_night || h.price || "").replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+      return match ? parseFloat(match[1]) : null;
+    })
+    .filter((n) => n !== null && n > 0);
+
+  const flightNums = flights
+    .map((f) => {
+      const match = String(f.price || "").replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
+      return match ? parseFloat(match[1]) : null;
+    })
+    .filter((n) => n !== null && n > 0);
+
+  const minH = hotelNums.length > 0 ? Math.min(...hotelNums) : 4000;
+  const maxH = hotelNums.length > 0 ? Math.max(...hotelNums) : minH;
+  const minF = flightNums.length > 0 ? Math.min(...flightNums) : 6000;
+  const maxF = flightNums.length > 0 ? Math.max(...flightNums) : minF;
+
+  // Sum of 1 hotel + 1 flight
+  const minBase = minH + minF;
+  const maxBase = maxH + maxF;
+
+  let lower = Math.floor(minBase / 500) * 500;
+  let upper = Math.ceil(maxBase / 500) * 500;
+
+  // Widen slightly if exact single match or very small gap
+  if (upper - lower < 1000) {
+    lower = Math.floor((minBase * 0.92) / 500) * 500;
+    upper = Math.ceil((maxBase * 1.08) / 500) * 500;
+  }
+
+  const nights = Math.max(1, itineraryDays.length ? itineraryDays.length - 1 : 3);
+  const minFullStay = Math.floor(((minH * nights) + minF) / 500) * 500;
+  const maxFullStay = Math.ceil(((maxH * nights) + maxF) / 500) * 500;
+
+  return {
+    lower: lower.toLocaleString("en-IN"),
+    upper: upper.toLocaleString("en-IN"),
+    minH: minH.toLocaleString("en-IN"),
+    maxH: maxH.toLocaleString("en-IN"),
+    minF: minF.toLocaleString("en-IN"),
+    maxF: maxF.toLocaleString("en-IN"),
+    nights,
+    minFullStay: minFullStay.toLocaleString("en-IN"),
+    maxFullStay: maxFullStay.toLocaleString("en-IN"),
+  };
 }
 
 const TABS = [
@@ -114,6 +205,7 @@ export default function TripDetailPage() {
   const summary = finalPlan?.summary || finalPlan?.final_output || finalPlan?.itinerary?.summary || "";
   const tips = finalPlan?.tips || finalPlan?.itinerary?.tips || [];
   const destination = getDestination(trip.promptHistory?.[0]);
+  const costRange = calculateTripCostRange(hotels, flights, itineraryDays);
 
   return (
     <PageWrapper>
@@ -177,6 +269,12 @@ export default function TripDetailPage() {
                 <Calendar className="w-4 h-4 text-[#15803d]" />
                 <span className="text-xs font-semibold text-[#15803d]">
                   {itineraryDays.length} Day{itineraryDays.length !== 1 ? "s" : ""} planned
+                </span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#f0fdf4] border border-[#4ade80]/30 px-3 py-2 rounded-xl">
+                <IndianRupee className="w-4 h-4 text-[#16a34a]" />
+                <span className="text-xs font-semibold text-[#16a34a]">
+                  Approx. Cost: ₹{costRange.lower} – ₹{costRange.upper}
                 </span>
               </div>
             </div>
@@ -252,7 +350,7 @@ export default function TripDetailPage() {
                               </p>
                               {act.cost && (
                                 <span className="inline-block mt-1.5 text-[11px] text-[#16a34a] bg-[#f0fdf4] px-2 py-0.5 rounded font-medium">
-                                  Est. cost: {act.cost}
+                                  Est. cost: {formatActivityCost(act.cost)}
                                 </span>
                               )}
                             </div>
@@ -282,7 +380,7 @@ export default function TripDetailPage() {
                             {hotel.rating || "4.5"}
                           </span>
                           <span className="text-xs font-semibold text-[#16a34a] bg-[#f0fdf4] px-2.5 py-0.5 rounded-lg">
-                            {hotel.price_per_night || "₹4,500/night"}
+                            {formatHotelPrice(hotel.price_per_night)}
                           </span>
                         </div>
                         <h4 className="text-sm font-bold text-[#1a1714] mb-1">{hotel.name || `Stay ${hIdx + 1}`}</h4>
@@ -344,7 +442,7 @@ export default function TripDetailPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold text-[#16a34a]">{fl.price || "₹5,200"}</p>
+                        <p className="text-xl font-bold text-[#16a34a]">{formatFlightPrice(fl.price)}</p>
                         <p className="text-xs text-[#7a6f65]">per traveller</p>
                       </div>
                     </div>
@@ -356,6 +454,43 @@ export default function TripDetailPage() {
             {/* SUMMARY TAB */}
             {activeTab === "summary" && (
               <motion.div key="summary" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+                {/* Estimated Trip Cost Card */}
+                <div className="bg-gradient-to-br from-[#fdf1ec] via-white to-[#f0fdf4] border border-[#e8e2d8] rounded-2xl p-6 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-5 border-b border-[#e8e2d8]/60 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-[#d4603a] text-white flex items-center justify-center shrink-0 shadow-md shadow-[#d4603a]/20">
+                        <IndianRupee className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-[#1a1714]">Estimated Trip Cost (Hotel + Flight)</h3>
+                        <p className="text-xs text-[#7a6f65]">Approx. cost combining 1 hotel option summed with 1 flight fare</p>
+                      </div>
+                    </div>
+                    <div className="bg-[#16a34a] text-white px-4 py-2.5 rounded-xl text-right shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/90">Approx. Range</p>
+                      <p className="text-xl font-extrabold tracking-tight">₹{costRange.lower} – ₹{costRange.upper}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    <div className="bg-white border border-[#e8e2d8] rounded-xl p-3.5 shadow-2xs">
+                      <span className="text-[11px] font-semibold text-[#b45309] uppercase tracking-wider block mb-1">Hotel Range (1 Night)</span>
+                      <p className="text-sm font-bold text-[#1a1714]">₹{costRange.minH} – ₹{costRange.maxH}</p>
+                      <p className="text-[11px] text-[#7a6f65]">per night</p>
+                    </div>
+                    <div className="bg-white border border-[#e8e2d8] rounded-xl p-3.5 shadow-2xs">
+                      <span className="text-[11px] font-semibold text-[#0369a1] uppercase tracking-wider block mb-1">Flight Fare</span>
+                      <p className="text-sm font-bold text-[#1a1714]">₹{costRange.minF} – ₹{costRange.maxF}</p>
+                      <p className="text-[11px] text-[#7a6f65]">per traveller</p>
+                    </div>
+                    <div className="bg-[#f0fdf4] border border-[#4ade80]/40 rounded-xl p-3.5 shadow-2xs">
+                      <span className="text-[11px] font-semibold text-[#15803d] uppercase tracking-wider block mb-1">Full Stay ({costRange.nights} Nights + Flight)</span>
+                      <p className="text-sm font-bold text-[#16a34a]">₹{costRange.minFullStay} – ₹{costRange.maxFullStay}</p>
+                      <p className="text-[11px] text-[#7a6f65]">est. total per traveller</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-white border border-[#e8e2d8] rounded-2xl p-6">
                   <h3 className="text-sm font-bold text-[#1a1714] flex items-center gap-2 mb-3">
                     <Sparkles className="w-4 h-4 text-[#d4603a]" />
