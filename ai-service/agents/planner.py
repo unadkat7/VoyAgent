@@ -86,23 +86,14 @@ planner_chain = planner_prompt | planner_llm
 # ============================================================
 
 def planner_node(state: TravelState):
-
-    print("\n========================================")
-    print("Planner Agent")
-    print("========================================")
-
     # Build the entire conversation
     conversation = ""
 
     for message in state["messages"]:
-
         if isinstance(message, HumanMessage):
             conversation += f"User: {message.content}\n"
-
         elif isinstance(message, AIMessage):
             conversation += f"Assistant: {message.content}\n"
-
-    print("Analyzing complete conversation...\n")
 
     planner_output = planner_chain.invoke(
         {
@@ -110,13 +101,7 @@ def planner_node(state: TravelState):
         }
     )
 
-    print("Planner Output:\n")
-    print(planner_output.model_dump_json(indent=2))
-
     return {
-
         "planner_output": planner_output,
-
         "current_agent": "planner"
-
     }

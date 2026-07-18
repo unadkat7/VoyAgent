@@ -234,7 +234,6 @@ def search_hotels(
     max_price_per_night = None
     if trip_requirements.budget and trip_requirements.budget > 0:
         max_price_per_night = int((trip_requirements.budget * 0.5) / duration_days)
-        print(f"\n[Budget Rule] Total Budget: {trip_requirements.budget} {currency} | Duration: {duration_days} days -> Max Hotel Budget: {max_price_per_night} {currency}/night")
 
     # Build intelligent search query so Google Hotels returns actual hotels & resorts tailored to preferences & budget
     search_query_parts = [trip_requirements.destination or ""]
@@ -297,17 +296,5 @@ def search_hotels(
     response.raise_for_status()
 
     raw_response = response.json()
-    print("\n================ RAW HOTEL ================\n")
-
-    if raw_response.get("properties"):
-        print(
-            json.dumps(
-                raw_response["properties"][0],
-                indent=4,
-                ensure_ascii=True,
-            )
-        )
-
-    print("\n===========================================\n")
 
     return parse_hotels(raw_response, trip_requirements=trip_requirements, default_currency=currency, max_price_per_night=max_price_per_night)

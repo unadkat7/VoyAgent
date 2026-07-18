@@ -172,7 +172,6 @@ def search_flights(trip_requirements: TripRequirements) -> FlightRecommendations
     max_flight_price = None
     if trip_requirements.budget and trip_requirements.budget > 0:
         max_flight_price = int((trip_requirements.budget * 0.35) / travelers)
-        print(f"\n[Flight Budget Rule] Total Budget: {trip_requirements.budget} {currency} | Travelers: {travelers} -> Max Flight Budget: {max_flight_price} {currency}/person")
 
     params = {
         "engine": "google_flights",
@@ -188,21 +187,9 @@ def search_flights(trip_requirements: TripRequirements) -> FlightRecommendations
         "api_key": SERP_API_KEY,
     }
 
-    print(f"\nSearching Flights: {departure_id} -> {arrival_id} ({check_in} to {check_out})...")
-
     response = requests.get(BASE_URL, params=params, timeout=30)
     response.raise_for_status()
 
     raw_response = response.json()
-    print("\n================ RAW FLIGHT ================\n")
-
-    if raw_response.get("best_flights"):
-        print(json.dumps(raw_response["best_flights"][0], indent=4, ensure_ascii=True))
-    elif raw_response.get("other_flights"):
-        print(json.dumps(raw_response["other_flights"][0], indent=4, ensure_ascii=True))
-    else:
-        print("No exact flights found in raw response.")
-
-    print("\n============================================\n")
 
     return parse_flights(raw_response, trip_requirements=trip_requirements, default_currency=currency, max_flight_price=max_flight_price)

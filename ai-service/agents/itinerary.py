@@ -61,11 +61,6 @@ itinerary_chain = itinerary_prompt | itinerary_llm
 
 # 4.2 Itinerary Node
 def itinerary_node(state: TravelState):
-
-    print("\n===================================")
-    print("Itinerary Agent")
-    print("===================================\n")
-
     planner = state["planner_output"]
 
     itinerary_output = itinerary_chain.invoke(
@@ -74,13 +69,6 @@ def itinerary_node(state: TravelState):
             planner.model_dump_json(indent=2)
         }
     )
-
-
-    print("\nGenerated Itinerary\n")
-
-    for day in itinerary_output.itinerary:
-
-        print(f"Day {day.day} : {day.title}")
 
     return {
         "itinerary_output": itinerary_output,

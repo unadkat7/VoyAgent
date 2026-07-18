@@ -427,18 +427,26 @@ export default function TripDetailPage() {
                         <div>
                           <p className="text-xs font-semibold text-[#d4603a] uppercase">{fl.airline || "Air India"}</p>
                           <p className="text-sm font-bold text-[#1a1714]">Flight {fl.flight_number || `AI-${200 + fIdx}`}</p>
-                          <p className="text-xs text-[#7a6f65]">{fl.duration || "2h 15m"} · {fl.stops || "Non-stop"}</p>
+                          <p className="text-xs text-[#7a6f65] mt-0.5">
+                            {fl.duration || "2h 15m"} · {typeof fl.stops === "number" ? (fl.stops === 0 ? "Non-stop" : `${fl.stops} stop${fl.stops > 1 ? "s" : ""}`) : (fl.stops || "Non-stop")}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-[#1a1714]">{fl.departure || "08:30 AM"}</p>
-                          <p className="text-[11px] text-[#7a6f65]">Departure</p>
+                        <div className="text-center min-w-[100px]">
+                          <p className="text-lg font-bold text-[#1a1714]">{fl.departure || fl.departure_time || "08:30 AM"}</p>
+                          <p className="text-xs font-semibold text-[#d4603a] mt-0.5 bg-[#fdf1ec] px-2 py-0.5 rounded-md inline-block">
+                            {fl.departure_airport || fl.from || "AMD - Ahmedabad"}
+                          </p>
+                          <p className="text-[11px] text-[#7a6f65] mt-0.5">Departure</p>
                         </div>
-                        <div className="text-[#e8e2d8] text-lg">→</div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-[#1a1714]">{fl.arrival || "10:45 AM"}</p>
-                          <p className="text-[11px] text-[#7a6f65]">Arrival</p>
+                        <div className="text-[#c8bfb5] text-lg font-bold">✈</div>
+                        <div className="text-center min-w-[100px]">
+                          <p className="text-lg font-bold text-[#1a1714]">{fl.arrival || fl.arrival_time || "10:45 AM"}</p>
+                          <p className="text-xs font-semibold text-[#d4603a] mt-0.5 bg-[#fdf1ec] px-2 py-0.5 rounded-md inline-block">
+                            {fl.arrival_airport || fl.to || "BOM - Mumbai"}
+                          </p>
+                          <p className="text-[11px] text-[#7a6f65] mt-0.5">Arrival</p>
                         </div>
                       </div>
                       <div className="text-right">

@@ -76,23 +76,13 @@ composer_chain = composer_prompt | composer_llm
 
 
 def response_composer_node(state: TravelState):
-
-    print("\n===================================")
-    print("Response Composer Agent")
-    print("===================================\n")
-
     planner = state["planner_output"]
-
     hotels = state["hotel_output"]
-
     flights = state["flight_output"]
-
     itinerary = state["itinerary_output"]
 
     final_output = composer_chain.invoke(
-
         {
-
             "planner_output":
             planner.model_dump_json(indent=2),
 
@@ -104,17 +94,10 @@ def response_composer_node(state: TravelState):
 
             "itinerary_output":
             itinerary.model_dump_json(indent=2),
-
         }
-
     )
 
-    print("\nFinal Travel Plan Created\n")
-
     return {
-
         "final_output": final_output,
-
         "current_agent": "composer"
-
     }
