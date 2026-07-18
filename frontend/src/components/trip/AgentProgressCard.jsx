@@ -120,14 +120,12 @@ export default function AgentProgressCard({ loading }) {
     }
 
     setPhase(1);
-    const t1 = setTimeout(() => setPhase(2), 800);   // trigger fan-out
-    const t2 = setTimeout(() => setPhase(3), 2800);  // trigger fan-in + composer
-    const t3 = setTimeout(() => setPhase(4), 3500);  // all done
+    const t1 = setTimeout(() => setPhase(2), 1200);   // trigger fan-out
+    const t2 = setTimeout(() => setPhase(3), 8500);   // trigger fan-in + composer
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      clearTimeout(t3);
     };
   }, [loading]);
 
@@ -250,7 +248,7 @@ export default function AgentProgressCard({ loading }) {
         }`}>
           <FileText className={`w-4 h-4 ${phase >= 3 ? "text-[#16a34a]" : "text-[#7a6f65]"}`} />
         </div>
-        <div>
+        <div className="flex-1">
           <p className={`text-sm font-semibold ${phase >= 3 ? "text-[#1a1714]" : "text-[#7a6f65]"}`}>
             Response Composer
           </p>
@@ -259,6 +257,15 @@ export default function AgentProgressCard({ loading }) {
               ? "Merging hotels, flights & itinerary into your plan..."
               : "Waiting for all agents to finish..."}
           </p>
+          {phase === 3 && (
+            <div className="mt-2 h-0.5 rounded-full overflow-hidden bg-[#16a34a]/30">
+              <motion.div
+                className="h-full rounded-full w-1/2 bg-[#16a34a]"
+                animate={{ x: ["-100%", "200%"] }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </div>
+          )}
         </div>
         {phase === 3 && <Loader2 className="w-4 h-4 text-[#16a34a] animate-spin ml-auto shrink-0" />}
         {phase >= 4 && <CheckCircle2 className="w-4 h-4 text-[#16a34a] ml-auto shrink-0" />}
