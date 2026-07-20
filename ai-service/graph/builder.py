@@ -14,6 +14,7 @@ from agents.router import (
     router_node,
     route_after_router,
 )
+from agents.critic import critic_node
 from agents.clarification import clarification_node
 from agents.hotel import hotel_node
 from agents.flight import flight_node
@@ -76,6 +77,11 @@ graph.add_node(
     response_composer_node,
 )
 
+graph.add_node(
+    "critic",
+    critic_node
+)
+
 # ============================================================
 # EDGES
 # ============================================================
@@ -128,25 +134,35 @@ graph.add_edge(
 )
 
 # Fan-in: Response Composer Agent waits until all 3 parallel branches complete
-graph.add_edge(
-    "hotel",
-    "composer",
+
+graph.add_edge("hotel", "critic")
+
+graph.add_edge("flight", "critic")
+
+graph.add_edge("itinerary", "critic")
+
+
+# 3. Add routing logic after the critic
+def route_after_critic(state: TravelState):
+    validation = state.get("critic_output")
+    if validation and not validation.is_valid:
+        # Stop planning and ask the user for help!
+        return END
+    
+    # If valid, proceed to the composer
+    return "composer"
+
+# 4. Add the conditional edges
+graph.add_conditional_edges(
+    "critic",
+    route_after_critic,
+    {
+        "composer": "composer",
+        END: END
+    }
 )
 
-graph.add_edge(
-    "flight",
-    "composer",
-)
-
-graph.add_edge(
-    "itinerary",
-    "composer",
-)
-
-graph.add_edge(
-    "composer",
-    END,
-)
+graph.add_edge("composer", END)
 
 # ============================================================
 # COMPILE

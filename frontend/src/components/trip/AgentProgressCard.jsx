@@ -110,7 +110,7 @@ function FanInLines({ active }) {
 }
 
 export default function AgentProgressCard({ loading }) {
-  // phase 0=idle, 1=coordinator, 2=agents running, 3=composing, 4=done
+  // phase 0=idle, 1=coordinator, 2=agents running, 3=composing, 4=critic, 5=done
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
@@ -121,11 +121,13 @@ export default function AgentProgressCard({ loading }) {
 
     setPhase(1);
     const t1 = setTimeout(() => setPhase(2), 1200);   // trigger fan-out
-    const t2 = setTimeout(() => setPhase(3), 8500);   // trigger fan-in + composer
+    const t2 = setTimeout(() => setPhase(3), 6000);   // trigger fan-in + composer
+    const t3 = setTimeout(() => setPhase(4), 8500);   // trigger critic validation
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      clearTimeout(t3);
     };
   }, [loading]);
 
@@ -253,7 +255,9 @@ export default function AgentProgressCard({ loading }) {
             Response Composer
           </p>
           <p className="text-xs text-[#7a6f65]">
-            {phase >= 3
+            {phase >= 4
+              ? "Draft completed"
+              : phase >= 3
               ? "Merging hotels, flights & itinerary into your plan..."
               : "Waiting for all agents to finish..."}
           </p>
@@ -269,6 +273,36 @@ export default function AgentProgressCard({ loading }) {
         </div>
         {phase === 3 && <Loader2 className="w-4 h-4 text-[#16a34a] animate-spin ml-auto shrink-0" />}
         {phase >= 4 && <CheckCircle2 className="w-4 h-4 text-[#16a34a] ml-auto shrink-0" />}
+      </motion.div>
+
+      {/* ── NEW Step 4: Critic / Validator Agent ── */}
+      <motion.div
+        animate={phase >= 4 ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
+        transition={{ duration: 0.4 }}
+        className={`mt-2 flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-300 ${
+          phase >= 4 ? "border-[#8b5cf6]/30 bg-[#f5f3ff]" : "hidden"
+        }`}
+      >
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#8b5cf6]/10">
+          <Bot className="w-4 h-4 text-[#8b5cf6]" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-[#1a1714]">Critic Agent</p>
+          <p className="text-xs text-[#7a6f65]">
+            Validating budget, dates, and constraints...
+          </p>
+          {phase === 4 && (
+            <div className="mt-2 h-0.5 rounded-full overflow-hidden bg-[#8b5cf6]/30">
+              <motion.div
+                className="h-full rounded-full w-1/2 bg-[#8b5cf6]"
+                animate={{ x: ["-100%", "200%"] }}
+                transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+              />
+            </div>
+          )}
+        </div>
+        {phase === 4 && <Loader2 className="w-4 h-4 text-[#8b5cf6] animate-spin ml-auto shrink-0" />}
+        {phase >= 5 && <CheckCircle2 className="w-4 h-4 text-[#8b5cf6] ml-auto shrink-0" />}
       </motion.div>
     </motion.div>
   );

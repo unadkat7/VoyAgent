@@ -6,6 +6,7 @@ from schemas.hotel import HotelRecommendations
 from schemas.flight import FlightRecommendations
 from schemas.itinerary import DetailedItinerary
 from schemas.final import FinalTravelPlan
+from schemas.critic import ValidationResult
 
 
 # ============================================================
@@ -28,7 +29,6 @@ class TravelState(TypedDict):
 
     clarification_output: ClarificationResponse | None
 
-    # Future agents
     hotel_output: HotelRecommendations | None
 
     flight_output: FlightRecommendations | None
@@ -36,3 +36,5 @@ class TravelState(TypedDict):
     itinerary_output: DetailedItinerary | None
 
     final_output: FinalTravelPlan | None
+
+    critic_output: ValidationResult | None
